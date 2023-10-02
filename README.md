@@ -4,7 +4,7 @@ Prometheus exporter to check the hosts ping time value with desired MTU size.
 
 ### Usage
 
-```json
+```text
 usage: main.py [-h] [--hosts HOSTS] [--mtu_sizes MTU_SIZES] [--subtract_headers]
 
 Ping hosts with different MTU sizes and expose as Prometheus metrics.
@@ -21,13 +21,13 @@ options:
 
 It's possible to change the default http server(5000) by setting environment variable `SERVER_PORT`
 
-```json
+```text
 docker run --rm -p 8080:8080 -e SERVER_PORT=8080 -e PING_HOSTS="your_favourite.host.com" -e PING_MTU_SIZES="1400,1450,1528,1529,1628,1629" pgacek/ping-mtu-exporter:v1.2.0
 ```
 
 #### Example output
 
-```json
+```text
 # HELP ping_latency_milliseconds Ping time in miliseconds for hosts with different MTU sizes.
 # TYPE ping_latency_milliseconds gauge
 ping_latency_milliseconds{host="google.com",mtu_size="1300",payload="1272"} -1.0
