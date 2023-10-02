@@ -15,7 +15,7 @@ parser.add_argument('--hosts', type=str,
                     default=os.environ.get('PING_HOSTS', "google.com,yahoo.com,bing.com"))
 parser.add_argument('--mtu_sizes', type=str,
                     help='Comma-separated list of MTU sizes.',
-                    default=os.environ.get('PING_MTU_SIZES', "1390,1440,1540"))
+                    default=os.environ.get('PING_MTU_SIZES', "1300,1400,1500"))
 # Set `--subtract_headers` enabled by default( that's what ping command is doing by default)
 # and overwrite it if needed by SUBTRACT_HEADERS environment variable
 parser.add_argument('--subtract_headers', action='store_true',
