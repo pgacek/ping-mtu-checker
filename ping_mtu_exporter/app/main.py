@@ -15,7 +15,12 @@ parser.add_argument('--hosts', type=str,
                     default=os.environ.get('PING_HOSTS', "google.com,yahoo.com,bing.com"))
 parser.add_argument('--mtu_sizes', type=str,
                     help='Comma-separated list of MTU sizes.',
-                    default=os.environ.get('PING_MTU_SIZES', "1390,1420,1520"))
+                    default=os.environ.get('PING_MTU_SIZES', "1390,1440,1540"))
+# Set `--subtract_headers` enabled by default( that's what ping command is doing by default)
+# and overwrite it if needed by SUBTRACT_HEADERS environment variable
+parser.add_argument('--subtract_headers', action='store_true',
+                    help='Subtract 28 bytes from MTU size while pinging',
+                    default=os.environ.get('SUBTRACT_HEADERS', 'true').lower() == 'true')
 args = parser.parse_args()
 
 hosts = args.hosts.split(',')
@@ -24,7 +29,8 @@ mtu_sizes = [int(size) for size in args.mtu_sizes.split(',')]
 # Prometheus metric setup
 PING_STATUS = Gauge('ping_latency_milliseconds',
                     'Ping time in miliseconds for hosts with different MTU sizes.',
-                    ['host', 'mtu_size'])
+                    ['host', 'mtu_size', 'payload'])
+
 
 def ping_host_with_mtu(host, mtu_size):
     try:
@@ -32,7 +38,7 @@ def ping_host_with_mtu(host, mtu_size):
             # IP header: 20 bytes
             # ICMP header: 8 bytes
             # Total: 28 bytes
-            ["ping", "-c", "1", "-M", "do", "-s", str(mtu_size-28), host],
+            ["ping", "-c", "1", "-M", "do", "-s", str(mtu_size - 28 if args.subtract_headers else mtu_size), host],
             stderr=subprocess.STDOUT,
             universal_newlines=True,
         )
@@ -52,9 +58,13 @@ def update_metrics():
         for host in hosts:
             for mtu_size in mtu_sizes:
                 result = ping_host_with_mtu(host, mtu_size)
-                PING_STATUS.labels(host=host, mtu_size=str(mtu_size)).set(result)
+                PING_STATUS.labels(
+                    host=host,
+                    mtu_size=str(mtu_size),
+                    payload=str(mtu_size - 28 if args.subtract_headers else mtu_size)).set(result)
 
         time.sleep(10)
+
 
 class MetricsHandler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
@@ -69,11 +79,12 @@ class MetricsHandler(http.server.BaseHTTPRequestHandler):
             self.send_response(404)
             self.end_headers()
 
+
 if __name__ == "__main__":
     # Start the background thread for pinging
     threading.Thread(target=update_metrics, daemon=True).start()
 
-    PORT = int(os.environ.get('SERVER_PORT', 8080))
+    PORT = int(os.environ.get('SERVER_PORT', 5000))
     server_address = ('', PORT)
     httpd = http.server.HTTPServer(server_address, MetricsHandler)
     print(f"Serving metrics at port {PORT}")

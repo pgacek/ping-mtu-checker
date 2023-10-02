@@ -31,6 +31,7 @@ services:
     build: ./ping_mtu_exporter/.
     environment:
       - SERVER_PORT=8080
+      - SUBTRACT_HEADERS=True
     ports:
       - 8080:8080
     networks:
