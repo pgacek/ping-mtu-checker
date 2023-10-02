@@ -23,7 +23,7 @@ mtu_sizes = [int(size) for size in args.mtu_sizes.split(',')]
 
 # Prometheus metric setup
 PING_STATUS = Gauge('ping_latency_milliseconds',
-                    'Ping status for hosts with different MTU sizes.',
+                    'Ping time in miliseconds for hosts with different MTU sizes.',
                     ['host', 'mtu_size'])
 
 def ping_host_with_mtu(host, mtu_size):
@@ -42,7 +42,7 @@ def ping_host_with_mtu(host, mtu_size):
         if time_match:
             return float(time_match.group(1))
         else:
-            return 0
+            return -1
     except subprocess.CalledProcessError:
         return -1
 
