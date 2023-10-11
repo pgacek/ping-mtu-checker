@@ -14,7 +14,6 @@ options:
   --hosts HOSTS         Comma-separated list of hosts to ping.
   --mtu_sizes MTU_SIZES
                         Comma-separated list of MTU sizes.
-  --subtract_headers    Subtract 28 bytes from MTU size while pinging
 ```
 
 ### Run with docker
