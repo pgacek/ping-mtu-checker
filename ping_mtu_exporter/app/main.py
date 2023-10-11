@@ -5,8 +5,13 @@ import os
 import threading
 import time
 import argparse
+import logging
 from urllib.parse import urlparse
 from prometheus_client import Gauge, generate_latest
+
+# Set up logging
+log_level = os.environ.get('LOG_LEVEL', 'INFO')
+logging.basicConfig(level=log_level, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Set defaults using argparse
 parser = argparse.ArgumentParser(description="Ping hosts with different MTU sizes and expose as Prometheus metrics.")
@@ -16,11 +21,6 @@ parser.add_argument('--hosts', type=str,
 parser.add_argument('--mtu_sizes', type=str,
                     help='Comma-separated list of MTU sizes.',
                     default=os.environ.get('PING_MTU_SIZES', "1300,1400,1500"))
-# Set `--subtract_headers` enabled by default( that's what ping command is doing by default)
-# and overwrite it if needed by SUBTRACT_HEADERS environment variable
-parser.add_argument('--subtract_headers', action='store_true',
-                    help='Subtract 28 bytes from MTU size while pinging',
-                    default=os.environ.get('SUBTRACT_HEADERS', 'true').lower() == 'true')
 args = parser.parse_args()
 
 hosts = args.hosts.split(',')
@@ -29,27 +29,38 @@ mtu_sizes = [int(size) for size in args.mtu_sizes.split(',')]
 # Prometheus metric setup
 PING_STATUS = Gauge('ping_latency_milliseconds',
                     'Ping time in miliseconds for hosts with different MTU sizes.',
-                    ['host', 'mtu_size', 'payload'])
+                    ['host', 'ip_mtu', 'data'])
 
 
 def ping_host_with_mtu(host, mtu_size):
     try:
-        result = subprocess.check_output(
-            # IP header: 20 bytes
-            # ICMP header: 8 bytes
-            # Total: 28 bytes
-            ["ping", "-c", "1", "-M", "do", "-s", str(mtu_size - 28 if args.subtract_headers else mtu_size), host],
-            stderr=subprocess.STDOUT,
-            universal_newlines=True,
+        process = subprocess.Popen(
+            ["ping", "-c", "1", "-M", "do", "-s", str(mtu_size - 28), host],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True
         )
+        stdout, stderr = process.communicate()
 
-        # Extract the time value from the output
-        time_match = re.search(r"time=(\d+\.\d+) ms", result)
-        if time_match:
-            return float(time_match.group(1))
+        if process.returncode != 0:
+            raise subprocess.CalledProcessError(returncode=process.returncode, cmd=process.args, output=stdout,
+                                                stderr=stderr)
+
+        max_time_match = re.search(r"rtt min/avg/max/mdev = [\d.]+/[\d.]+/([\d.]+)/[\d.]+ ms", stdout)
+        if max_time_match:
+            return float(max_time_match.group(1))
         else:
+            logging.info(
+                f"Failed to extract max ping time for {host} with MTU size {mtu_size}. Unexpected ping output: {stdout}")
             return -1
-    except subprocess.CalledProcessError:
+
+
+    except subprocess.CalledProcessError as e:
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
+            combined_error = f"stdout: {e.output}, stderr: {e.stderr}"
+            logging.error(f"Failed to ping {host} with MTU size {mtu_size}. Error: {combined_error}")
+        else:
+            logging.info(f"Failed to ping {host} with MTU size {mtu_size}.")
         return -1
 
 
@@ -57,11 +68,14 @@ def update_metrics():
     while True:
         for host in hosts:
             for mtu_size in mtu_sizes:
-                result = ping_host_with_mtu(host, mtu_size)
-                PING_STATUS.labels(
-                    host=host,
-                    mtu_size=str(mtu_size),
-                    payload=str(mtu_size - 28 if args.subtract_headers else mtu_size)).set(result)
+                try:
+                    result = ping_host_with_mtu(host, mtu_size)
+                    PING_STATUS.labels(
+                        host=host,
+                        ip_mtu=str(mtu_size),
+                        data=str(mtu_size - 28)).set(result)
+                except Exception as e:
+                    logging.error(f"Error updating metrics for {host} with MTU size {mtu_size}: {e}")
 
         time.sleep(10)
 
@@ -87,5 +101,5 @@ if __name__ == "__main__":
     PORT = int(os.environ.get('SERVER_PORT', 5000))
     server_address = ('', PORT)
     httpd = http.server.HTTPServer(server_address, MetricsHandler)
-    print(f"Serving metrics at port {PORT}")
+    logging.info(f"Serving metrics at port {PORT}")
     httpd.serve_forever()
