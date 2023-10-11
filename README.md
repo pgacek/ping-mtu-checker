@@ -30,14 +30,13 @@ docker run --rm -p 8080:8080 -e SERVER_PORT=8080 -e PING_HOSTS="your_favourite.h
 ```text
 # HELP ping_latency_milliseconds Ping time in miliseconds for hosts with different MTU sizes.
 # TYPE ping_latency_milliseconds gauge
-ping_latency_milliseconds{host="google.com",mtu_size="1300",payload="1272"} -1.0
-ping_latency_milliseconds{host="google.com",mtu_size="1400",payload="1372"} -1.0
-ping_latency_milliseconds{host="google.com",mtu_size="1500",payload="1472"} -1.0
-ping_latency_milliseconds{host="google.com",mtu_size="1600",payload="1572"} -1.0
-ping_latency_milliseconds{host="yahoo.com",mtu_size="1300",payload="1272"} -1.0
-ping_latency_milliseconds{host="yahoo.com",mtu_size="1400",payload="1372"} -1.0
-ping_latency_milliseconds{host="yahoo.com",mtu_size="1500",payload="1472"} -1.0
-ping_latency_milliseconds{host="yahoo.com",mtu_size="1600",payload="1572"} -1.0
-ping_latency_milliseconds{host="bing.com",mtu_size="1300",payload="1272"} 29.6
-ping_latency_milliseconds{host="bing.com",mtu_size="1400",payload="1372"} 25.9
+ping_latency_milliseconds{data="1272",host="google.com",ip_mtu="1300"} 11.781
+ping_latency_milliseconds{data="1372",host="google.com",ip_mtu="1400"} 12.004
+ping_latency_milliseconds{data="1472",host="google.com",ip_mtu="1500"} -1.0
+ping_latency_milliseconds{data="1272",host="yahoo.com",ip_mtu="1300"} 174.989
+ping_latency_milliseconds{data="1372",host="yahoo.com",ip_mtu="1400"} 174.762
+ping_latency_milliseconds{data="1472",host="yahoo.com",ip_mtu="1500"} 175.259
+ping_latency_milliseconds{data="1272",host="bing.com",ip_mtu="1300"} 13.356
+ping_latency_milliseconds{data="1372",host="bing.com",ip_mtu="1400"} 12.282
+ping_latency_milliseconds{data="1472",host="bing.com",ip_mtu="1500"} -1.0
 ```
