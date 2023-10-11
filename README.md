@@ -24,6 +24,8 @@ It's possible to change the default http server(5000) by setting environment var
 docker run --rm -p 8080:8080 -e SERVER_PORT=8080 -e PING_HOSTS="your_favourite.host.com" -e PING_MTU_SIZES="1400,1450,1528,1529,1628,1629" pgacek/ping-mtu-exporter:v1.2.0
 ```
 
+To see more details about the errors, set the environment variable `LOG_LEVEL=DEBUG`
+
 #### Example output
 
 ```text
@@ -42,6 +44,7 @@ ping_latency_milliseconds{data="1472",host="bing.com",ip_mtu="1500"} -1.0
 
 #### Disclaimer
 Running this code directly on MacOS may show you the error like this:
+
 `ERROR - Failed to ping bing.com with MTU size 1400. Error: stdout: , stderr: ping: invalid message: 'd'`
 
 That's because MacOS's ping is different from the on Linux, especially the `-M` parameter
